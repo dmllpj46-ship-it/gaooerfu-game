@@ -37,8 +37,8 @@ export class Screens {
         <div class="screen__rule"></div>
         <p class="screen__lead">三洞林克斯球场 · 拖拽挥杆 · 看小白球飞向果岭</p>
         <ul class="screen__tips">
-          <li>按住球场任意处，向下拖动蓄力</li>
-          <li>左右拖动调整瞄准，松手出杆</li>
+          <li>左右拖动调整瞄准（松手不出杆）</li>
+          <li>按住并向下拖动蓄力，松手出杆</li>
           <li>1–4 或点击底部按钮换球杆</li>
         </ul>
     `,
