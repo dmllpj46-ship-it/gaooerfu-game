@@ -1,0 +1,23 @@
+{
+  "name": "gaooerfu-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "浏览器里的 3D 高尔夫小游戏（three.js）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

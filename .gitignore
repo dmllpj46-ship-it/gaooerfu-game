@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+
+# 工具/本地数据，不进仓库
+.workbuddy-ai/
+.shots/

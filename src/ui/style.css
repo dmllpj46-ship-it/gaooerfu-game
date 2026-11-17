@@ -1,0 +1,770 @@
+/*
+ * 视觉基调：深色玻璃 + 薄荷绿强调，服务于"在明亮球场上读得清"。
+ * 所有面板都用同一套色板变量，避免各处硬编码 rgba 导致色调漂移。
+ */
+
+:root {
+  color-scheme: dark;
+
+  --ink: #edf5f0;
+  --ink-dim: rgba(237, 245, 240, 0.66);
+  --ink-faint: rgba(237, 245, 240, 0.4);
+
+  --accent: #7ee787;
+  --accent-bright: #b6f36b;
+  --accent-deep: #3f9e52;
+  --accent-soft: rgba(126, 231, 135, 0.16);
+  --accent-line: rgba(126, 231, 135, 0.5);
+
+  --panel: rgba(9, 19, 16, 0.56);
+  --panel-deep: rgba(7, 14, 12, 0.78);
+  --hair: rgba(255, 255, 255, 0.09);
+  --hair-strong: rgba(255, 255, 255, 0.2);
+
+  --radius-sm: 9px;
+  --radius-md: 13px;
+  --radius-lg: 20px;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.26);
+  --shadow-deep: 0 20px 54px rgba(0, 0, 0, 0.42);
+
+  --font-ui: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1512;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  font: 13px/1.5 var(--font-ui);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 左上角球洞信息：左侧一道强调竖条 + 上下分区 */
+.hud__panel {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  min-width: 208px;
+  padding: 14px 18px 13px 20px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(158deg, rgba(17, 30, 26, 0.74), rgba(8, 16, 14, 0.6));
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.hud__panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-deep));
+}
+
+.hud__hole {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 7px;
+  line-height: 1.25;
+}
+
+.hud__hole span {
+  opacity: 0.45;
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+
+.hud__row {
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+
+.hud__row + .hud__row {
+  margin-top: 2px;
+}
+
+.hud__row b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 1px;
+}
+
+.hud__lie {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
+  color: var(--accent);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- 风向罗盘 ---------- */
+
+.wind {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 9px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(158deg, rgba(17, 30, 26, 0.74), rgba(8, 16, 14, 0.6));
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.wind__dial {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--hair-strong);
+  display: grid;
+  place-items: center;
+  background: rgba(5, 11, 9, 0.4);
+}
+
+/* 正前方的小刻度，让箭头有个参照 */
+.wind__dial::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 1px;
+  height: 4px;
+  margin-left: -0.5px;
+  background: var(--ink-faint);
+}
+
+.wind__needle {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+  transform-origin: 50% 50%;
+  transition: transform 0.25s ease;
+}
+
+.wind__speed {
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wind__speed b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 1px;
+}
+
+/* ---------- 力量条 ---------- */
+
+.power {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%) translateX(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.hud--aiming .power {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.power__track {
+  position: relative;
+  width: 18px;
+  height: 212px;
+  border-radius: 10px;
+  background: rgba(5, 11, 9, 0.72);
+  border: 1px solid var(--hair-strong);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* 刻度：每 18px 一道，压在填充色之上，读力度时有个参照 */
+.power__track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0 17px,
+    rgba(255, 255, 255, 0.22) 17px 18px
+  );
+}
+
+.power__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  z-index: 1;
+  border-radius: 0 0 9px 9px;
+  background: linear-gradient(180deg, var(--accent-bright), #57c765 58%, var(--accent-deep));
+  box-shadow: 0 0 18px rgba(126, 231, 135, 0.42);
+  transition: height 0.05s linear;
+}
+
+.power__fill--strong {
+  background: linear-gradient(180deg, #ffe08a, #ff9a4d 55%, #e0533a);
+  box-shadow: 0 0 20px rgba(255, 154, 77, 0.45);
+}
+
+.power__label {
+  font: 12px/1.3 var(--font-num);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+/* ---------- 球杆栏 ---------- */
+
+.hud__clubs {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(6, 13, 11, 0.42);
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.club {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 58px;
+  padding: 5px 9px 4px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink-dim);
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease,
+    color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.club__key {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font: 10px/1 var(--font-num);
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+.club b {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.club span {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  opacity: 0.72;
+}
+
+.club:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--hair-strong);
+  color: var(--ink);
+}
+
+.club--active {
+  background: linear-gradient(165deg, rgba(126, 231, 135, 0.24), rgba(63, 158, 82, 0.16));
+  border-color: var(--accent-line);
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(63, 158, 82, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.club--active .club__key {
+  color: var(--accent);
+}
+
+.club--active b {
+  color: #d8ffd2;
+}
+
+/* ---------- 操作提示 ---------- */
+
+.hud__hint {
+  position: absolute;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(6, 13, 11, 0.38);
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  transition: opacity 0.5s ease;
+}
+
+/* 打过一杆就淡出：常驻的教程文字会一直占着画面正下方 */
+.hud__hint--gone {
+  opacity: 0;
+}
+
+/* ---------- 瞄准读数 ---------- */
+
+/* 压在提示条上方：拖拽蓄力时手在画面下方，读数要落在同一视区里 */
+.aim {
+  position: absolute;
+  bottom: 108px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  background: linear-gradient(158deg, rgba(17, 30, 26, 0.78), rgba(8, 16, 14, 0.62));
+  border: 1px solid var(--accent-line);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  white-space: nowrap;
+  transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.aim--hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.aim__label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+/* 状态灯：对正是绿的，偏了变琥珀 —— 余光扫一眼就知道有没有对正 */
+.aim__label::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+  box-shadow: 0 0 7px rgba(126, 231, 135, 0.75);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.aim__value {
+  font: 12.5px/1.2 var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  color: var(--accent-bright);
+}
+
+.aim--off {
+  border-color: rgba(255, 207, 122, 0.42);
+}
+
+.aim--off .aim__label::before {
+  background: #ffcf7a;
+  box-shadow: 0 0 7px rgba(255, 207, 122, 0.7);
+}
+
+.aim--off .aim__value {
+  color: #ffcf7a;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: var(--panel-deep);
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-soft);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 0.24s ease, transform 0.24s ease;
+  pointer-events: none;
+}
+
+.toast--show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.toast--good {
+  color: var(--accent-bright);
+  border-color: rgba(182, 243, 107, 0.3);
+}
+
+.toast--bad {
+  color: #ffb3a7;
+  border-color: rgba(255, 179, 167, 0.3);
+}
+
+/* ---------- 全屏遮罩 ---------- */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  /* 遮罩只压暗不遮死：留着球场的绿，玩家知道自己在哪一洞 */
+  background: radial-gradient(ellipse at 50% 32%, rgba(8, 22, 18, 0.26), rgba(3, 8, 6, 0.66));
+  backdrop-filter: blur(3px) saturate(0.95);
+  z-index: 10;
+  font: 14px/1.6 var(--font-ui);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  animation: screen-in 0.32s ease both;
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.screen__card {
+  position: relative;
+  max-width: 520px;
+  padding: 44px 46px 40px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(168deg, rgba(18, 32, 27, 0.8), rgba(7, 15, 13, 0.88));
+  border: 1px solid var(--hair);
+  box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  animation: card-in 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.screen__kicker {
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 500;
+  /* 0.2em 是拉丁文与中文的折中：再宽中文会被拉散，再窄 "3D MINI GOLF" 就没有呼吸感 */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.screen__title {
+  margin: 0;
+  font-size: clamp(32px, 5.2vw, 52px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: 0.03em;
+  text-wrap: balance;
+}
+
+/* 标题下的一道渐隐分隔线，给文字区一个视觉落点 */
+.screen__rule {
+  width: 64px;
+  height: 2px;
+  margin: 20px auto 18px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-line), transparent);
+}
+
+.screen__lead {
+  margin: 0 0 6px;
+  color: var(--ink-dim);
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
+}
+
+.screen__tips {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 9px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.screen__tips li {
+  position: relative;
+  padding: 10px 14px 10px 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--hair);
+}
+
+.screen__tips li::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(126, 231, 135, 0.6);
+}
+
+.screen__actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.screen__hint {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+/* 结算页的杆数：单独放大，扫一眼就知道成绩 */
+.score-big {
+  display: block;
+  margin: 4px 0 2px;
+  font: 600 clamp(46px, 7vw, 68px)/1 var(--font-num);
+  letter-spacing: -0.02em;
+  color: #f2fff0;
+}
+
+.score-big em {
+  font-style: normal;
+  font-size: 0.42em;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+  margin-left: 6px;
+}
+
+.score-delta {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font: 600 13px/1.5 var(--font-num);
+  letter-spacing: 0.08em;
+  color: #06210e;
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep));
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+  padding: 12px 32px;
+  border-radius: 999px;
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn--primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent-bright), #4cbb63 62%, var(--accent-deep));
+  color: #06210e;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(63, 158, 82, 0.34);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn--primary:hover {
+  box-shadow: 0 16px 38px rgba(63, 158, 82, 0.46);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 720px) {
+  .hud__panel {
+    min-width: 158px;
+    padding: 11px 14px 10px 16px;
+  }
+
+  .hud__hole {
+    font-size: 15px;
+  }
+
+  .hud__hint {
+    display: none;
+  }
+
+  .hud__clubs {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .club {
+    min-width: 60px;
+    padding: 7px 9px 6px;
+  }
+
+  .club__key {
+    display: none;
+  }
+
+  .power {
+    right: 14px;
+  }
+
+  .wind {
+    top: 14px;
+    right: 14px;
+    padding: 6px 11px 6px 7px;
+    gap: 7px;
+  }
+
+  .wind__dial {
+    width: 26px;
+    height: 26px;
+  }
+
+  .wind__needle {
+    width: 15px;
+    height: 15px;
+  }
+
+  .power__track {
+    height: 160px;
+  }
+
+  .screen__card {
+    padding: 32px 24px 28px;
+  }
+}
+
+/* ---------- 调试芯片 ---------- */
+
+.stats-chip {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font: 12px/1.4 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  background: rgba(6, 13, 11, 0.6);
+  border: 1px solid var(--hair);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
+#boot-error {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #ffd9d9;
+  background: #120b0b;
+  font: 14px/1.6 system-ui, sans-serif;
+  white-space: pre-wrap;
+}
+
+#boot-error[hidden] {
+  display: none;
+}
